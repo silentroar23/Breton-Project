@@ -3,6 +3,7 @@
 .history
 .code-workspace
 .DS_Store
+*_.py
 
 # Data
 Data

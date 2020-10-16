@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from util_energy_opt import *
 
-def energy_opt_v2(vel_current, vel_pred, gear_pre, tm_now=None, gear_pre_duration=3, delta_t=1, backward_sim=True):
+def energy_opt_v2(vel_current, vel_pred, gear_pre, tm_now=0, gear_pre_duration=3, delta_t=1, backward_sim=True):
 
 	# vel_current = 24 / 3.6
 	# vel_pred = np.ones(10) * 27 / 3.6
@@ -14,6 +14,7 @@ def energy_opt_v2(vel_current, vel_pred, gear_pre, tm_now=None, gear_pre_duratio
 
 	# vel_num_per_second =  6
 	prediction_time_steps = vel_pred.size
+	gear_pre = np.where(gears_in_use == gear_pre)[0]
 
 	vel_pred = vel_preprocessing(vel_current, vel_pred)
 
@@ -196,6 +197,7 @@ def energy_opt_v2(vel_current, vel_pred, gear_pre, tm_now=None, gear_pre_duratio
 			gear_cur = gear_pre
 			Tm_cur = tm_now / gears_in_use[gear_cur]
 			flag = 0
+			motor_eff_cur = -1
 			# print(f'No strategy, output previous torque and gear')
 			print(f'No strategy, don\'t optimize')
 		else:

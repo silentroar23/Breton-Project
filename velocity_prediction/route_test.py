@@ -168,8 +168,8 @@ for i in progressbar.progressbar(range(n_steps_in, v.size - n_steps_out)):
 # for i in progressbar.progressbar(range(n_steps_in, 500)):
 	if i == n_steps_in:
 		# Calculate original velocity, torque, motor_eff, energy
-		vel_current = v[i - 1]   # vel_current: v ： km/h
-		vel_next = v[i]			 # vel_next:  km/h
+		vel_current = v[i - 1]   # vel_current: km/h
+		vel_next = v[i]			 # vel_next: km/h
 		gear_next = gears_in_use[int(g[i] - 1)]
 
 		_, torque, _ = motor_torque_calc(vel_current / 3.6 ,vel_next / 3.6, gear_next)	
@@ -182,7 +182,8 @@ for i in progressbar.progressbar(range(n_steps_in, v.size - n_steps_out)):
 		data_history = data[i - n_steps_in:i].copy()
 		  # need to update every iteration # data_history:km/h
 	else:
-		vel_current = vel_next
+		vel_current = vel_next  # update
+		#TODO may need to change vel_next to predicted vel
 		vel_next = v[i]
 		gear_next = gears_in_use[int(g[i] - 1)]
 		
@@ -193,7 +194,7 @@ for i in progressbar.progressbar(range(n_steps_in, v.size - n_steps_out)):
 			vel_seq[n_steps_in-1] = vel_current
 		else:
 			vel_seq = data[0, i - n_steps_in:i + n_steps_out].copy()
-			vel_seq[0, n_steps_in-1] = vel_current
+			vel_seq[0, n_steps_in - 1] = vel_current
 
 	# optimization module is activated only when the car is in drive mode
 	if torque >= 0:
@@ -239,6 +240,10 @@ for i in progressbar.progressbar(range(n_steps_in, v.size - n_steps_out)):
 				vel_mean = distance_calc(vel_current / 3.6, vel_next / 3.6)
 				#TODO 是否选档
 				gear_ctl = gear_next
+
+				gear_former = gear_ctl 
+				gear_ctl, flag_motor_speed, flag_torque = modify_gear(vel_current/3.6, vel_ctl/3.6, gear_former, gears_in_use)
+
 
 				################ 存储标志位 ################
 				opt_results_v3['flag'].append(-1)
@@ -314,11 +319,13 @@ for i in progressbar.progressbar(range(n_steps_in, v.size - n_steps_out)):
 				
 				if i == n_steps_in:	
 					# (flag, Tm_opt, vel_opt, vel_min, vel_max, vel_pred_r, gear_opt, motor_eff_opt, JcostMin, sys_mode_opt) = energy_opt_v1(gears_in_use, gear_next, vel_current=vel_current / 3.6, vel_pred=vel_pred.squeeze(0) / 3.6, vel_num_per_second=10, gearOpt=True)
-					(vel_opt, gear_opt, Tm_opt, motor_eff_opt, vel_min, vel_max, flag) = energy_opt_v3(gears_in_use, gear_pre, vel_current, vel_pred.squeeze(0) / 3.6, torque)					# vel_pred:km/h ,vel_opt:m/s
+					# (vel_opt, gear_opt, Tm_opt, motor_eff_opt, vel_min, vel_max, flag) = energy_opt_v3(gears_in_use, gear_pre, vel_current, vel_pred.squeeze(0) / 3.6, torque)					# vel_pred:km/h ,vel_opt:m/s
+					energy_opt_v2(vel_current, vel_pred, gear_pre, tm_now=None, gear_pre_duration=3, delta_t=1, backward_sim=True):
 				else:
 					# (flag, Tm_opt, vel_opt, vel_min, vel_max, vel_pred_r, gear_opt, motor_eff_opt, JcostMin, sys_mode_opt) = energy_opt_v1(gears_in_use, gear_ctl, vel_current=vel_current / 3.6, vel_pred=vel_pred.squeeze(0) / 3.6, vel_num_per_second=10, gearOpt=True)
-					(vel_opt, gear_opt, Tm_opt, motor_eff_opt, vel_min, vel_max, flag) = energy_opt_v3(gears_in_use, gear_pre, vel_current, vel_pred.squeeze(0) / 3.6, torque)
-				
+					# (vel_opt, gear_opt, Tm_opt, motor_eff_opt, vel_min, vel_max, flag) = energy_opt_v3(gears_in_use, gear_pre, vel_current, vel_pred.squeeze(0) / 3.6, torque)
+									energy_opt_v2(vel_current, vel_pred, gear_pre, tm_now=None, gear_pre_duration=3, delta_t=1, backward_sim=True):
+
 				# 转矩融合模块
 				if flag == 1:
 					gear_ctl = gear_opt[0]
@@ -399,7 +406,7 @@ for i in progressbar.progressbar(range(n_steps_in, v.size - n_steps_out)):
 					opt_results_v3['flag_motor_speed_dmd'].append(flag_motor_speed_dmd)
 					opt_results_v3['flag_torque_dmd'].append(flag_torque_dmd)
 					opt_results_v3['vel_dmd'].append(v[i])
-					opt_results_v3['torque_dmd'].append(torque_ori)
+					opt_results_v3['torque_dmd'].append(torque_dmd)
 					opt_results_v3['gear_dmd'].append((np.where(gears_in_use == gear_next)[0])[0]+1)				
 					opt_results_v3['motor_eff_dmd'].append(motor_eff_seq_dmd[0])
 

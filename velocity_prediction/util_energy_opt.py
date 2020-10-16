@@ -69,6 +69,10 @@ def vel_calc(torque, vel_current, gear, Reg_rate=Reg_rate):
 		acc = (torque * i0 / eff_diff / eff_cpling * gear / r / Reg_rate - m * g * mu - 0.5 * air_density * C_A * C_d * vel_current ** 2) / (rot_coef * m)
 	return vel_current + acc
 
+def vel_calc_with_torque_wheel(torque_wheel, vel_current):
+	acc = (torque_wheel / r - m * g * mu - 0.5 * air_density * C_A * C_d * vel_current ** 2) / (rot_coef * m)
+	return vel_current + acc
+
 def motor_torque_calc(vel_now, vel_next, gear):  # velocity unit: m/s^2
 	# Parameters
 	i0 = 4.267  # Final reduction drive ratio
@@ -200,5 +204,34 @@ def check_vel_tm_consistence(vel_seq, gear_opt, Tm_seq, Reg_rate=Reg_rate):
 			flag[i] = 1
 	return flag
 
+def modify_gear(vel_now, vel_next, gear_former, gears_in_use):
+	flag_motor_speed = 1
+	flag_torque = 1
+	gear_rec_speed = []
+	gear_rec_torque = []
 
-# %%
+	for gear in gears_in_use:
+		(motor_speed, torque, _) = motor_torque_calc(vel_now, vel_next, gear)
+		if motor_speed < motor_pos_speeds.max():
+			gear_rec_speed.append(gear)
+
+	if gear_rec_speed != []:
+		for gear in gear_rec_speed:
+			(motor_speed, torque, _) = motor_torque_calc(vel_now, vel_next, gear)
+			Tm_max = interpolate_pos_torque(motor_speed)
+			Tm_min = interpolate_neg_torque(motor_speed)
+			if 0 <= torque <= Tm_max:
+				gear_rec_torque.append(gear)
+				break
+			elif Tm_min <= torque < 0:
+				gear_rec_torque.append(gear)
+				break
+		if gear_rec_torque != []:
+			gear = gear_rec_torque[0]
+		else:
+			gear = gear_rec_speed[0]
+			flag_torque = 0		
+	else:
+		gear = gear_former
+		flag_motor_speed = 0
+	return gear, flag_motor_speed, flag_torque
