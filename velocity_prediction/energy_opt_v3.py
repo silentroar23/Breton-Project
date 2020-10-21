@@ -1,10 +1,15 @@
 import math
 import numpy as np
 from sqp_optimal_speed_track import energy_cal
-from cluster_and_show_results import distance_cal
+# from cluster_and_show_results import distance_cal
 import pickle
 from util_energy_opt import *
 import copy
+
+def distance_cal(v):
+    v_mean = np.array([np.array(v[i:i + 2]).mean() for i in range(len(v) - 1)])             
+    distance = np.sum(v_mean)
+    return distance
 
 ###### 这6个函数用来生成不同原始车速下的可行车速轨迹 ######
 def higher_v_acc_acc(vel_current, vel_pred, v_last, acc=1, dec=-1):

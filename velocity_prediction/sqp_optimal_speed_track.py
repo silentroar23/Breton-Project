@@ -1,9 +1,9 @@
 import numpy as np
-from scipy.optimize import minimize
-import pickle
+# from scipy.optimize import minimize
+# import pickle
 import math
-from scipy.optimize import Bounds
-import matplotlib.pyplot as plt
+# from scipy.optimize import Bounds
+# import matplotlib.pyplot as plt
 
 i0 = 4.267  # Final reduction drive ratio
 eff_diff = 0.9  # Differential efficiency

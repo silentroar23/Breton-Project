@@ -122,8 +122,9 @@ def energy_and_motor_eff_calc(vel_seq, gear_seq, Reg_rate=Reg_rate, per_meter=Tr
 		
 		if motor_speed > min(transmission_speed_max, motor_pos_speeds.max()):#降档，print从*降到*、车速、加速度、
 			gear_former =  gear_seq[0]
-			while motor_speed > min(transmission_speed_max, motor_pos_speeds.max()):
-				gear_seq[0] = gears_in_use[np.argwhere(gears_in_use == gear_seq[0]) + 1]
+			while motor_speed > min(transmission_speed_max, motor_pos_speeds.max()) and np.argwhere(gears_in_use == gear_former) <= 7:
+				gear_former = gears_in_use[np.argwhere(gears_in_use == gear_seq[0]) + 1]
+				gear_seq[0] = gear_former
 				motor_speed, _, _ = motor_torque_calc(vel_seq[0], vel_seq[1], gear_seq[0])
 			print(f'\noriginal motor speed exceed limits, change gear {gear_former} to {gear_seq[0]}\n'
 				  f'velocity: {vel_seq[0], vel_seq[1]}\n'

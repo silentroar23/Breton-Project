@@ -97,6 +97,9 @@ for file in velocity_files:
 
 			# %%
 			deta_torque_wheel = 1500
+			count = 0
+			W = 0.5
+			w1 = 1
 			opt_results_v2 = {}
 
 
@@ -137,9 +140,10 @@ for file in velocity_files:
 			opt_results_v2['motor_speed_ctl'] = []
 
 			# ################ 存储权重及权重变化率 ################
-			# opt_results_v3['w1'] = []
-			# opt_results_v3['W1'] = []
-
+			opt_results_v2['w1'] = []
+			opt_results_v2['W'] = []
+			distance_ctl = []
+			distance_dmd = []
 			################ 一些并不知道为什么要存的东西 ################
 			opt_results_v2['mean_vel_past'] = []
 			opt_results_v2['mean_vel_pred'] = []
@@ -238,7 +242,7 @@ for file in velocity_files:
 						if np.count_nonzero(vel_pred <= 0) > 0:
 
 							flag = -1 
-
+							count = 0
 							vel_ctl = vel_next
 							vel_optimize = -1
 							vel_dmd = vel_next
@@ -275,6 +279,7 @@ for file in velocity_files:
 
 							# 转矩融合模块
 							if flag == 1:
+								count = count + 1
 								vel_ctl = vel_opt[1]
 								vel_optimize = vel_opt[1]
 								vel_dmd = vel_next
@@ -293,6 +298,19 @@ for file in velocity_files:
 								torque_wheel_opt = torque_seq_opt[0] * gear_opt[0] * i0 * eff_diff * eff_cpling if torque_seq_opt[0] > 0 else torque_seq_opt[0] * gear_opt[0] * i0 / (eff_diff * eff_cpling * Reg_rate)
 								torque_wheel_dmd = torque_seq_dmd[0] * gear_dmd * i0 * eff_diff * eff_cpling if torque_seq_dmd[0] > 0 else torque_seq_dmd[0] * gear_dmd[0] * i0 / (eff_diff * eff_cpling * Reg_rate)
 
+								vel_aver_ctl = (vel_ctl / 3.6 + vel_current / 3.6) / 2 
+								vel_aver_dmd = (vel_dmd / 3.6 + vel_current / 3.6) / 2
+								distance_ctl.append(vel_aver_ctl)
+								distance_dmd.append(vel_aver_dmd)
+								if count == 10:
+									distance_delta = (sum(distance_ctl) - sum(distance_dmd)) / sum(distance_dmd)
+									w1 = w_modify(distance_delta)
+									W = min(1, W * w1)
+			
+									torque_wheel_ctl = W * torque_wheel_ctl + (1 - W) * torque_wheel_dmd
+									count = 0
+									distance_ctl = []
+									distance_dmd = []
 								if torque_wheel_ctl - torque_wheel_dmd > deta_torque_wheel:
 									torque_wheel_ctl = torque_wheel_dmd + deta_torque_wheel
 									vel_ctl = vel_calc_with_torque_wheel(torque_wheel_ctl, vel_current/3.6) * 3.6
@@ -315,7 +333,7 @@ for file in velocity_files:
 
 							elif flag == 0:
 								print(f'step {i - 15}: Invalid dp calculation')
-
+								count = 0
 								# torque_ctl = torque_ori
 								vel_ctl = vel_next
 								vel_optimize = -1
@@ -348,12 +366,12 @@ for file in velocity_files:
 								data_history = np.hstack([data_history[1:], [vel_next]])
 
 								vel_mean = distance_calc(vel_current/3.6, vel_ctl/3.6)
-
+								
 					# the past {n_steps_in} seconds of velocity exists 0
 					else:
 						print(f'step {i - 15}: the past {n_steps_in} seconds of velocity exists 0')
 						flag = 2
-
+						count = 0
 						vel_ctl = vel_next
 						vel_optimize = -1
 						vel_dmd = vel_next
@@ -385,11 +403,12 @@ for file in velocity_files:
 						
 						vel_mean = distance_calc(vel_current/3.6, vel_ctl/3.6)
 
+
 				else:
 					print(f'step {i - 15}: does not enter optimization module\n')
 					# update data_history
 					flag = 3
-
+					count = 0
 					vel_ctl = vel_next
 					vel_optimize = -1
 					vel_dmd = vel_next
@@ -408,6 +427,7 @@ for file in velocity_files:
 
 					vel_mean = distance_calc(vel_current/3.6, vel_ctl/3.6)
 
+
 				# print(opt_results_v2['flag'][count])
 				################################### 存储数据 ###################################	
 				################ 存储标志位 ################
@@ -422,7 +442,6 @@ for file in velocity_files:
 					energy_opt = -1
 					torque_wheel_opt = -1
 					motor_speed_opt = -1
-					
 
 				opt_results_v2['flag_motor_speed_opt'].append(flag_motor_speed_opt)
 				opt_results_v2['flag_torque_opt'].append(flag_torque_opt)
@@ -457,7 +476,10 @@ for file in velocity_files:
 				opt_results_v2['motor_speed_ctl'].append(motor_speed_ctl)
 				
 				opt_results_v2['vel_mean'].append(vel_mean)
-				
+
+				################# 存储权重 ################
+				opt_results_v2['W'].append(W)
+				opt_results_v2['w1'].append(w1)
 				# ################ 预测车速 ################
 				opt_results_v2['vel_pred'].append(vel_pred[0])
 
